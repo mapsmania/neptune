@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space.js Neptune Globe</title>
+    <style>
+        body { margin: 0; background-color: #000; overflow: hidden; font-family: monospace; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "space.js": "https://unpkg.com/space.js@1.0.1/dist/space.js"
+        }
+    }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { UI, Panel, Slider, Button } from 'space.js';
+
+    // --- 1. CORE THREE.JS SETUP ---
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.body.appendChild(renderer.domElement);
+
+    // --- 2. THE PLANET (NEPTUNE) ---
+    const textureLoader = new THREE.TextureLoader();
+    const neptuneTexture = textureLoader.load('2k_neptune.jpg');
+    
+    // Neptune is blueish-cyan, so we give the material a slight tint
+    const geometry = new THREE.SphereGeometry(5, 64, 64);
+    const material = new THREE.MeshPhongMaterial({
+        map: neptuneTexture,
+        shininess: 10,
+        specular: new THREE.Color(0x333333)
+    });
+    
+    const neptune = new THREE.Mesh(geometry, material);
+    scene.add(neptune);
+
+    // --- 3. THE STARS (BACKGROUND) ---
+    const starGeometry = new THREE.BufferGeometry();
+    const starMaterial = new THREE.PointsMaterial({ color: 0xffffff });
+    const starVertices = [];
+    for (let i = 0; i < 5000; i++) {
+        const x = (Math.random() - 0.5) * 2000;
+        const y = (Math.random() - 0.5) * 2000;
+        const z = (Math.random() - 0.5) * 2000;
+        starVertices.push(x, y, z);
+    }
+    starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+    const stars = new THREE.Points(starGeometry, starMaterial);
+    scene.add(stars);
+
+    // --- 4. LIGHTING ---
+    const mainLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    mainLight.position.set(10, 5, 10);
+    scene.add(mainLight);
+    
+    const ambientLight = new THREE.AmbientLight(0x2222ff, 0.2); // Subtle blue ambient fill
+    scene.add(ambientLight);
+
+    camera.position.z = 15;
+
+    // --- 5. SPACE.JS UI INTEGRATION ---
+    const ui = new UI();
+    const panel = new Panel({ title: 'NEPTUNE-DATA' });
+    ui.add(panel);
+
+    let config = {
+        rotationSpeed: 0.003,
+        pulse: false
+    };
+
+    panel.add(new Slider({
+        label: 'ROTATION',
+        min: 0,
+        max: 0.02,
+        value: config.rotationSpeed,
+        callback: (v) => { config.rotationSpeed = v; }
+    }));
+
+    panel.add(new Button({
+        label: 'RESET CAMERA',
+        callback: () => {
+            camera.position.set(0, 0, 15);
+            camera.lookAt(0, 0, 0);
+        }
+    }));
+
+    // --- 6. ANIMATION LOOP ---
+    function animate(time) {
+        requestAnimationFrame(animate);
+
+        // Slow rotation
+        neptune.rotation.y += config.rotationSpeed;
+        
+        // Gentle "float" effect for the camera
+        camera.position.y = Math.sin(time * 0.001) * 0.2;
+
+        renderer.render(scene, camera);
+    }
+
+    // Handle Window Resize
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+</script>
+</body>
+</html>
